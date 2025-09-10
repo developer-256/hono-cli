@@ -1,4 +1,4 @@
-# Hono CLI Tool
+# @hono CLI Tool
 
 A powerful command-line interface for managing Hono projects with TypeScript, providing scaffolding and automation for rapid API development.
 
@@ -20,7 +20,7 @@ A powerful command-line interface for managing Hono projects with TypeScript, pr
    # or clone to any directory of your choice
    ```
 
-2. **Add the Hono CLI to your PATH:**
+2. **Add the @hono CLI to your PATH:**
 
    **For Zsh users (default on macOS and many Linux distros):**
 
@@ -90,7 +90,7 @@ This will:
 ```bash
 hono init my-blog-api
 cd my-blog-api
-npm install  # or pnpm install
+bun i
 cp .env.example .env
 # Configure your .env file
 npm run dev
@@ -199,6 +199,19 @@ my-awesome-api/
 - Be descriptive about the action
 - Follow RESTful conventions when possible
 
+**HTTP Method Detection:**
+
+The CLI automatically determines the HTTP method based on the route name:
+
+- Routes starting with `GET_`, `POST_`, `PUT_`, `PATCH_`, `DELETE_` use the corresponding method
+- Single word routes matching `GET`, `POST`, `PUT`, `PATCH`, `DELETE` use that method
+- For unrecognized patterns, it defaults to `POST` method
+- Examples:
+  - `GET_PROFILE` → `get` method
+  - `UPDATE_STATUS` → `post` method (UPDATE is not a valid HTTP method)
+  - `SPECIAL` → `post` method (defaults to POST)
+  - `DELETE_USER` → `delete` method
+
 ### Workflow Example
 
 ```bash
@@ -207,7 +220,7 @@ hono init my-ecommerce-api
 cd my-ecommerce-api
 
 # 2. Set up dependencies
-npm install
+bun i
 cp .env.example .env
 # Edit .env with your configuration
 

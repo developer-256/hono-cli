@@ -147,11 +147,29 @@ for route in ${routes[@]}; do
       method="delete"
       ;;
     *)
-      # Default case: convert to lowercase
-      method=${route,,}
-      # If it contains underscores, extract the first part as method
+      # Default case: try to extract method from route name, fallback to post
       if [[ "$route" == *"_"* ]]; then
-        method=$(echo "$route" | cut -d'_' -f1 | tr '[:upper:]' '[:lower:]')
+        first_part=$(echo "$route" | cut -d'_' -f1 | tr '[:upper:]' '[:lower:]')
+        # Check if the first part is a valid HTTP method
+        case "$first_part" in
+          "get"|"post"|"put"|"patch"|"delete"|"head"|"options")
+            method="$first_part"
+            ;;
+          *)
+            method="post"  # Default to POST for unrecognized patterns
+            ;;
+        esac
+      else
+        # Single word routes default to post unless they match a known method
+        method_lower=${route,,}
+        case "$method_lower" in
+          "get"|"post"|"put"|"patch"|"delete"|"head"|"options")
+            method="$method_lower"
+            ;;
+          *)
+            method="post"  # Default to POST for unrecognized single words
+            ;;
+        esac
       fi
       ;;
   esac
@@ -179,7 +197,7 @@ EOF
 done
 
 # Create or update module tags file
-cd ../../../modules
+cd ../../
 TAGS_FILE="module.tags.ts"
 
 if [ ! -f "$TAGS_FILE" ]; then
@@ -194,35 +212,44 @@ else
   # Add new tag to existing file
   # Check if the resource tag already exists
   if ! grep -q "${resource_name}:" "$TAGS_FILE"; then
-    # Add new tag before the closing brace
-    sed -i "/^};/i\\  ${resource_name}: [\"${resource_name^}\"]," "$TAGS_FILE"
+    # Check if the moduleTags object is empty
+    if grep -q "export const moduleTags = {};" "$TAGS_FILE"; then
+      # Replace empty object with object containing the new module
+      sed -i "s/export const moduleTags = {};/export const moduleTags = {\n  ${resource_name}: [\"${resource_name^}\"],\n};/" "$TAGS_FILE"
+    else
+      # Add new tag before the closing brace
+      sed -i "/^};/i\\  ${resource_name}: [\"${resource_name^}\"]," "$TAGS_FILE"
+    fi
     echo "✅ Added ${resource_name} tag to ${TAGS_FILE}"
   fi
 fi
 
-# Update src/index.ts with new controller
-cd ../../
+# Update src/index.ts with new controller  
+cd ../
 INDEX_FILE="index.ts"
 
 # Add import statement after the last import
 IMPORT_LINE="import { ${resource_name}Controller } from \"./modules/${resource_name}/controller\";"
 LAST_IMPORT_LINE=$(grep -n "^import" "$INDEX_FILE" | tail -1 | cut -d: -f1)
-sed -i "${LAST_IMPORT_LINE}a\\${IMPORT_LINE}" "$INDEX_FILE"
+sed -i "${LAST_IMPORT_LINE}a\\
+${IMPORT_LINE}" "$INDEX_FILE"
 
 # Add controller to the controllers array
-# Find the controllers array specifically and handle both empty and non-empty arrays
-CONTROLLERS_START=$(grep -n "const controllers = \[" "$INDEX_FILE" | cut -d: -f1)
-CONTROLLERS_END=$(tail -n +$CONTROLLERS_START "$INDEX_FILE" | grep -n "^];" | head -1 | cut -d: -f1)
-CONTROLLERS_END_LINE=$((CONTROLLERS_START + CONTROLLERS_END - 1))
-
-# Check if array is empty (controllers = []; on same line or next line)
-if grep -A1 "const controllers = \[" "$INDEX_FILE" | grep -q "^];"; then
-  # Empty array - replace the empty array with array containing the controller
-  sed -i "s/const controllers = \[\];/const controllers = [\n  ${resource_name}Controller,\n];/" "$INDEX_FILE"
+# Handle different formatting styles (multiline and single line arrays)
+if grep -q "const controllers: any = \[\];" "$INDEX_FILE"; then
+  # Empty array - replace with array containing the controller
+  sed -i "s/const controllers: any = \[\];/const controllers: any = [\n  ${resource_name}Controller,\n];/" "$INDEX_FILE"
+elif grep -q "const controllers: any = \[.*\];" "$INDEX_FILE"; then
+  # Single line array (formatted by prettier) - add controller inside the brackets
+  sed -i "s/const controllers: any = \[\([^]]*\)\];/const controllers: any = [\1, ${resource_name}Controller];/" "$INDEX_FILE"
 else
-  # Non-empty array - add controller before closing bracket
-  PREV_LINE=$((CONTROLLERS_END_LINE - 1))
-  sed -i "${PREV_LINE}a\\  ${resource_name}Controller," "$INDEX_FILE"
+  # Multi-line array - find the closing bracket and add before it
+  CONTROLLERS_END_LINE=$(grep -n "^];" "$INDEX_FILE" | head -1 | cut -d: -f1)
+  if [ -n "$CONTROLLERS_END_LINE" ]; then
+    PREV_LINE=$((CONTROLLERS_END_LINE - 1))
+    sed -i "${PREV_LINE}a\\
+  ${resource_name}Controller," "$INDEX_FILE"
+  fi
 fi
 
 # Disable cleanup trap on successful completion

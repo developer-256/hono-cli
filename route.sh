@@ -62,11 +62,29 @@ case "$route_name" in
     method="delete"
     ;;
   *)
-    # Default case: convert to lowercase
-    method=${route_name,,}
-    # If it contains underscores, extract the first part as method
+    # Default case: try to extract method from route name, fallback to post
     if [[ "$route_name" == *"_"* ]]; then
-      method=$(echo "$route_name" | cut -d'_' -f1 | tr '[:upper:]' '[:lower:]')
+      first_part=$(echo "$route_name" | cut -d'_' -f1 | tr '[:upper:]' '[:lower:]')
+      # Check if the first part is a valid HTTP method
+      case "$first_part" in
+        "get"|"post"|"put"|"patch"|"delete"|"head"|"options")
+          method="$first_part"
+          ;;
+        *)
+          method="post"  # Default to POST for unrecognized patterns
+          ;;
+      esac
+    else
+      # Single word routes default to post unless they match a known method
+      method_lower=${route_name,,}
+      case "$method_lower" in
+        "get"|"post"|"put"|"patch"|"delete"|"head"|"options")
+          method="$method_lower"
+          ;;
+        *)
+          method="post"  # Default to POST for unrecognized single words
+          ;;
+      esac
     fi
     ;;
 esac
