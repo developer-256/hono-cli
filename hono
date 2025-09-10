@@ -1,0 +1,190 @@
+#!/bin/bash
+
+# Hono CLI Tool
+# A command-line interface for Hono project management
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Function to print colored output
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}"
+}
+
+print_error() {
+    echo -e "${RED}❌ $1${NC}"
+}
+
+print_warning() {
+    echo -e "${YELLOW}⚠️  $1${NC}"
+}
+
+print_info() {
+    echo -e "${BLUE}ℹ️  $1${NC}"
+}
+
+# Function to show usage
+show_usage() {
+    echo "Hono CLI - A command-line tool for Hono project management"
+    echo ""
+    echo "Usage:"
+    echo "  hono init <project-name>           Initialize a new Hono project"
+    echo "  hono add module <module-name>      Add a new module to the project"
+    echo "  hono add route <module> <route>    Add a new route to an existing module"
+    echo "  hono help                          Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  hono init my-api                   # Creates a new project called 'my-api'"
+    echo "  hono add module user               # Adds a 'user' module"
+    echo "  hono add route user GET_PROFILE    # Adds a GET_PROFILE route to user module"
+}
+
+# Function to initialize a new project
+init_project() {
+    if [ -z "$1" ]; then
+        print_error "Project name is required"
+        echo "Usage: hono init <project-name>"
+        exit 1
+    fi
+
+    local project_name="$1"
+    
+    # Validate project name (basic validation)
+    if [[ ! "$project_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        print_error "Project name can only contain letters, numbers, hyphens, and underscores"
+        exit 1
+    fi
+
+    # Check if directory already exists
+    if [ -d "$project_name" ]; then
+        print_error "Directory '$project_name' already exists"
+        exit 1
+    fi
+
+    print_info "Initializing Hono project: $project_name"
+    
+    # Create project directory
+    mkdir "$project_name" || {
+        print_error "Failed to create project directory"
+        exit 1
+    }
+
+    cd "$project_name" || {
+        print_error "Failed to enter project directory"
+        exit 1
+    }
+
+    # Clone the repository
+    print_info "Cloning Hono starter template..."
+    if ! git clone https://github.com/developer-256/hono-starter.git temp_clone; then
+        print_error "Failed to clone repository"
+        cd ..
+        rm -rf "$project_name"
+        exit 1
+    fi
+
+    # Move files from temp_clone to current directory
+    print_info "Setting up project structure..."
+    mv temp_clone/* . 2>/dev/null || true
+    mv temp_clone/.* . 2>/dev/null || true
+    rm -rf temp_clone
+
+    # Remove the original git history and initialize new repo
+    rm -rf .git
+    git init
+    
+    print_success "Project '$project_name' initialized successfully!"
+    print_info "Next steps:"
+    echo "  1. cd $project_name"
+    echo "  2. npm install (or pnpm install)"
+    echo "  3. Copy .env.example to .env and configure"
+    echo "  4. Start adding modules with: hono add module <module-name>"
+}
+
+# Function to add a module
+add_module() {
+    if [ -z "$1" ]; then
+        print_error "Module name is required"
+        echo "Usage: hono add module <module-name>"
+        exit 1
+    fi
+
+    local module_name="$1"
+    
+    # Check if we're in a Hono project
+    if [ ! -f "package.json" ] || [ ! -d "src" ]; then
+        print_error "Not in a Hono project directory"
+        print_info "Run 'hono init <project-name>' to create a new project"
+        exit 1
+    fi
+
+    # Make module.sh executable and run it
+    chmod +x "$SCRIPT_DIR/module.sh"
+    print_info "Creating module: $module_name"
+    "$SCRIPT_DIR/module.sh" "$module_name"
+}
+
+# Function to add a route
+add_route() {
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        print_error "Both module name and route name are required"
+        echo "Usage: hono add route <module-name> <route-name>"
+        echo "Example: hono add route user GET_PROFILE"
+        exit 1
+    fi
+
+    local module_name="$1"
+    local route_name="$2"
+    
+    # Check if we're in a Hono project
+    if [ ! -f "package.json" ] || [ ! -d "src" ]; then
+        print_error "Not in a Hono project directory"
+        print_info "Run 'hono init <project-name>' to create a new project"
+        exit 1
+    fi
+
+    # Make route.sh executable and run it
+    chmod +x "$SCRIPT_DIR/route.sh"
+    print_info "Adding route '$route_name' to module '$module_name'"
+    "$SCRIPT_DIR/route.sh" "$module_name" "$route_name"
+}
+
+# Main command processing
+case "$1" in
+    "init")
+        init_project "$2"
+        ;;
+    "add")
+        case "$2" in
+            "module")
+                add_module "$3"
+                ;;
+            "route")
+                add_route "$3" "$4"
+                ;;
+            *)
+                print_error "Unknown add command: $2"
+                echo "Available: module, route"
+                show_usage
+                exit 1
+                ;;
+        esac
+        ;;
+    "help"|"--help"|"-h"|"")
+        show_usage
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        show_usage
+        exit 1
+        ;;
+esac
