@@ -252,6 +252,21 @@ else
   fi
 fi
 
+# Update src/db/schema/index.ts with new entity export
+DB_SCHEMA_INDEX="db/schema/index.ts"
+if [ -f "$DB_SCHEMA_INDEX" ]; then
+  SCHEMA_EXPORT_LINE="export * from \"@/modules/${resource_name}/entity\";"
+  
+  # Check if export already exists
+  if ! grep -q "export \* from \"@/modules/${resource_name}/entity\"" "$DB_SCHEMA_INDEX"; then
+    # Add export to the file
+    echo "$SCHEMA_EXPORT_LINE" >> "$DB_SCHEMA_INDEX"
+    echo "✅ Added schema export to ${DB_SCHEMA_INDEX}"
+  fi
+else
+  echo "⚠️  Warning: ${DB_SCHEMA_INDEX} not found - skipping schema export"
+fi
+
 # Disable cleanup trap on successful completion
 trap - EXIT
 echo "✅ Module '${resource_name}' created successfully!"

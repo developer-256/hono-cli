@@ -40,12 +40,18 @@ show_usage() {
     echo "  hono init <project-name>           Initialize a new Hono project"
     echo "  hono add module <module-name>      Add a new module to the project"
     echo "  hono add route <module> <route>    Add a new route to an existing module"
+    echo "  hono remove route <module> <route> Remove a route from an existing module"
+    echo "  hono remove module <module-name>   Remove an entire module"
+    echo "  hono uninstall                     Completely remove @hono CLI from system"
     echo "  hono help                          Show this help message"
     echo ""
     echo "Examples:"
     echo "  hono init my-api                   # Creates a new project called 'my-api'"
     echo "  hono add module user               # Adds a 'user' module"
     echo "  hono add route user GET_PROFILE    # Adds a GET_PROFILE route to user module"
+    echo "  hono remove route user GET_PROFILE # Removes the GET_PROFILE route from user module"
+    echo "  hono remove module user            # Removes the entire user module"
+    echo "  hono uninstall                     # Completely removes @hono CLI"
 }
 
 # Function to initialize a new project
@@ -158,6 +164,114 @@ add_route() {
     "$SCRIPT_DIR/route.sh" "$module_name" "$route_name"
 }
 
+# Function to remove a route
+remove_route() {
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        print_error "Both module name and route name are required"
+        echo "Usage: hono remove route <module-name> <route-name>"
+        echo "Example: hono remove route user GET_PROFILE"
+        exit 1
+    fi
+
+    local module_name="$1"
+    local route_name="$2"
+    
+    # Check if we're in a Hono project
+    if [ ! -f "package.json" ] || [ ! -d "src" ]; then
+        print_error "Not in a Hono project directory"
+        print_info "Run 'hono init <project-name>' to create a new project"
+        exit 1
+    fi
+
+    # Make remove-route.sh executable and run it
+    chmod +x "$SCRIPT_DIR/remove-route.sh"
+    print_info "Removing route '$route_name' from module '$module_name'"
+    "$SCRIPT_DIR/remove-route.sh" "$module_name" "$route_name"
+}
+
+# Function to remove a module
+remove_module() {
+    if [ -z "$1" ]; then
+        print_error "Module name is required"
+        echo "Usage: hono remove module <module-name>"
+        exit 1
+    fi
+
+    local module_name="$1"
+    
+    # Check if we're in a Hono project
+    if [ ! -f "package.json" ] || [ ! -d "src" ]; then
+        print_error "Not in a Hono project directory"
+        print_info "Run 'hono init <project-name>' to create a new project"
+        exit 1
+    fi
+
+    # Confirmation prompt
+    print_warning "This will permanently delete the '$module_name' module and all its files."
+    read -p "Are you sure you want to continue? (y/N): " confirm
+    case $confirm in
+        [Yy]* )
+            # Make remove-module.sh executable and run it
+            chmod +x "$SCRIPT_DIR/remove-module.sh"
+            print_info "Removing module '$module_name'"
+            "$SCRIPT_DIR/remove-module.sh" "$module_name"
+            ;;
+        * )
+            print_info "Module removal cancelled"
+            exit 0
+            ;;
+    esac
+}
+
+# Function to uninstall @hono CLI
+uninstall_cli() {
+    print_warning "This will completely remove @hono CLI from your system."
+    read -p "Are you sure you want to continue? (y/N): " confirm
+    case $confirm in
+        [Yy]* )
+            print_info "Uninstalling @hono CLI..."
+            
+            # Get the installation directory
+            CLI_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+            
+            # Remove PATH entries from shell configs
+            print_info "Removing PATH entries from shell configurations..."
+            
+            # Remove from .zshrc if it exists
+            if [ -f "$HOME/.zshrc" ]; then
+                sed -i.bak '/export PATH.*hono.*PATH/d' "$HOME/.zshrc"
+                print_success "Removed PATH entry from ~/.zshrc"
+            fi
+            
+            # Remove from .bashrc if it exists
+            if [ -f "$HOME/.bashrc" ]; then
+                sed -i.bak '/export PATH.*hono.*PATH/d' "$HOME/.bashrc"
+                print_success "Removed PATH entry from ~/.bashrc"
+            fi
+            
+            # Remove alias entries if they exist
+            if [ -f "$HOME/.zshrc" ]; then
+                sed -i.bak '/alias hono=/d' "$HOME/.zshrc"
+            fi
+            if [ -f "$HOME/.bashrc" ]; then
+                sed -i.bak '/alias hono=/d' "$HOME/.bashrc"
+            fi
+            
+            print_info "Removing CLI directory: $CLI_DIR"
+            
+            # Remove the CLI directory
+            rm -rf "$CLI_DIR"
+            
+            print_success "@hono CLI has been completely removed from your system!"
+            print_info "Please restart your terminal or run 'source ~/.zshrc' or 'source ~/.bashrc' to update your PATH"
+            ;;
+        * )
+            print_info "Uninstall cancelled"
+            exit 0
+            ;;
+    esac
+}
+
 # Main command processing
 case "$1" in
     "init")
@@ -178,6 +292,25 @@ case "$1" in
                 exit 1
                 ;;
         esac
+        ;;
+    "remove")
+        case "$2" in
+            "module")
+                remove_module "$3"
+                ;;
+            "route")
+                remove_route "$3" "$4"
+                ;;
+            *)
+                print_error "Unknown remove command: $2"
+                echo "Available: module, route"
+                show_usage
+                exit 1
+                ;;
+        esac
+        ;;
+    "uninstall")
+        uninstall_cli
         ;;
     "help"|"--help"|"-h"|"")
         show_usage

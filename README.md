@@ -117,6 +117,7 @@ hono add module <module-name>
   - `routes/` - Individual route files (GET.ts, POST.ts, DELETE.ts, PATCH.ts, GET_ONE.ts)
 - Updates `src/modules/module.tags.ts` with new module tags
 - Updates `src/index.ts` to register the new controller
+- Updates `src/db/schema/index.ts` to export the new entity
 
 **Example:**
 
@@ -154,6 +155,65 @@ hono add route user UPDATE_PASSWORD
 hono add route blogPost GET_BY_CATEGORY
 hono add route userProfile DELETE_AVATAR
 ```
+
+### Remove a Route
+
+Remove a specific route from an existing module:
+
+```bash
+hono remove route <module-name> <route-name>
+```
+
+**Requirements:**
+
+- Module and route must exist
+- Route name must match exactly (case-sensitive)
+- Must be run from the root of a Hono project
+
+**What it does:**
+
+- Removes the route file from `src/modules/<module-name>/routes/<route-name>.ts`
+- Updates the controller to remove the route import and registration
+- Maintains clean OpenAPI integration
+
+**Examples:**
+
+```bash
+hono remove route user GET_PROFILE
+hono remove route user UPDATE_PASSWORD
+hono remove route blogPost GET_BY_CATEGORY
+```
+
+### Remove a Module
+
+Remove an entire module and all its associated files:
+
+```bash
+hono remove module <module-name>
+```
+
+**Requirements:**
+
+- Module must exist
+- Must be run from the root of a Hono project
+
+**What it does:**
+
+- Removes the entire `src/modules/<module-name>/` directory
+- Updates `src/modules/module.tags.ts` to remove module tags
+- Updates `src/index.ts` to remove controller registration
+- Updates `src/db/schema/index.ts` to remove entity export
+- Cleans up all imports and references
+
+**Examples:**
+
+```bash
+hono remove module user
+hono remove module blogPost
+hono remove module userProfile
+```
+
+**⚠️ Warning:** This action is irreversible. Make sure to backup your code before removing modules.
 
 ## 📁 Project Structure
 
@@ -237,6 +297,63 @@ hono add route order GET_BY_USER
 
 # 5. Start development
 npm run dev
+```
+
+## 🗑️ Uninstalling
+
+### Complete Removal
+
+To completely remove the @hono CLI from your computer:
+
+1. **Remove the cloned directory:**
+
+   ```bash
+   rm -rf ~/scripts/hono
+   # or rm -rf /path/to/your/hono/directory
+   ```
+
+2. **Remove PATH entry from shell configuration:**
+
+   **For Zsh users:**
+
+   ```bash
+   # Remove the line containing hono from .zshrc
+   sed -i '/export PATH.*hono.*PATH/d' ~/.zshrc
+   source ~/.zshrc
+   ```
+
+   **For Bash users:**
+
+   ```bash
+   # Remove the line containing hono from .bashrc
+   sed -i '/export PATH.*hono.*PATH/d' ~/.bashrc
+   source ~/.bashrc
+   ```
+
+   **Alternative (Manual removal):**
+
+   - Open `~/.zshrc` or `~/.bashrc` in your editor
+   - Remove the line: `export PATH="$HOME/scripts/hono:$PATH"`
+   - Save and run `source ~/.zshrc` or `source ~/.bashrc`
+
+3. **Verify removal:**
+   ```bash
+   hono help  # Should return "command not found"
+   echo $PATH | grep hono  # Should return nothing
+   ```
+
+### Remove Alias (if you used the alias method)
+
+If you installed using an alias instead of PATH:
+
+```bash
+# For Zsh
+sed -i '/alias hono=/d' ~/.zshrc
+source ~/.zshrc
+
+# For Bash
+sed -i '/alias hono=/d' ~/.bashrc
+source ~/.bashrc
 ```
 
 ## 🔧 Troubleshooting
