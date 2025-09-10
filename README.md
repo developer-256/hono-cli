@@ -20,18 +20,37 @@ A powerful command-line interface for managing Hono projects with TypeScript, pr
    # or clone to any directory of your choice
    ```
 
-2. **Add the Hono CLI to your PATH by adding this line to your `.zshrc` (or `.bashrc`):**
+2. **Add the Hono CLI to your PATH:**
+
+   **For Zsh users (default on macOS and many Linux distros):**
 
    ```bash
+   # run in terminal
    echo 'export PATH="$HOME/scripts/hono:$PATH"' >> ~/.zshrc
    source ~/.zshrc
    ```
 
-   Or if you cloned to a different directory:
+   **For Bash users:**
 
    ```bash
+   # run in terminal
+   echo 'export PATH="$HOME/scripts/hono:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+   **If you cloned to a different directory, replace the path accordingly:**
+
+   ```bash
+   # For Zsh
    echo 'export PATH="/path/to/your/hono/directory:$PATH"' >> ~/.zshrc
    source ~/.zshrc
+
+   # For Bash
+   echo 'export PATH="/path/to/your/hono/directory:$PATH"' >> ~/.bashrc
+   source ~/.bashrc
+
+   # Or directly add this to your .zshrc or .bashrc file
+   export PATH="/path/to/your/hono/directory:$PATH"
    ```
 
 3. **Verify installation:**
@@ -213,9 +232,54 @@ npm run dev
 
 If you get `command not found: hono`, check:
 
-1. The path in your `.zshrc` is correct
-2. You've sourced your `.zshrc`: `source ~/.zshrc`
-3. The hono script has execute permissions: `chmod +x /path/to/hono`
+1. **Verify your shell and configuration file:**
+
+   ```bash
+   echo $SHELL  # Check your current shell
+   ```
+
+   - If using Zsh: edit `~/.zshrc`
+   - If using Bash: edit `~/.bashrc`
+
+2. **Check if the PATH was added correctly:**
+
+   ```bash
+   echo $PATH | grep hono  # Should show your hono directory
+   ```
+
+3. **Verify the export command was added to your shell config:**
+
+   ```bash
+   # For Zsh users
+   grep "hono" ~/.zshrc
+
+   # For Bash users
+   grep "hono" ~/.bashrc
+   ```
+
+   The output should show: `export PATH="$HOME/scripts/hono:$PATH"`
+
+4. **Source your configuration file:**
+
+   ```bash
+   # For Zsh
+   source ~/.zshrc
+
+   # For Bash
+   source ~/.bashrc
+   ```
+
+5. **Check that the hono script exists and has execute permissions:**
+
+   ```bash
+   ls -la ~/scripts/hono/hono  # Verify file exists
+   chmod +x ~/scripts/hono/hono  # Make it executable if needed
+   ```
+
+6. **Test with absolute path:**
+   ```bash
+   ~/scripts/hono/hono help  # Should work if PATH is the issue
+   ```
 
 ### Permission Denied
 
