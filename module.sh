@@ -180,7 +180,7 @@ import { createRoute, RouteHandler } from "@hono/zod-openapi";
 import { moduleTags } from "../../module.tags";
 
 export const ${route}_DTO = createRoute({
-  path: "",
+  path: "/${resource_name}",
   method: "${method}",
   tags: moduleTags.${resource_name},
   request: {},
