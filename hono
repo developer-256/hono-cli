@@ -114,6 +114,7 @@ init_project() {
     echo "  2. bun i"
     echo "  3. cp .env.example .env"
     echo "  4. Start adding modules with: hono add module <module-name>"
+    echo "  5. bun dev"
 }
 
 # Function to add a module
